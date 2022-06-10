@@ -5,6 +5,6 @@ npm start
 
 # Description
 
-App made for connecting developers 
+App made for developers by developers.
 
 
