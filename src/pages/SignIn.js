@@ -7,7 +7,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { auth, db, gitProvider, provider } from "../firebaseConfig"
@@ -16,6 +16,9 @@ import homeImg from "../Images/home.jpg"
 export default function SignIn() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  useEffect(() => {
+    localStorage.setItem("token", "notLoggedIn")
+  }, [])
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -34,8 +37,8 @@ export default function SignIn() {
           name: res.user.displayName,
           email: res.user.email,
           photo: res.user.photoURL,
+          id: res.user.uid,
         })
-        console.log(res.user)
 
         await setDoc(
           usersDoc,
@@ -43,6 +46,7 @@ export default function SignIn() {
             name: res.user.displayName,
             email: res.user.email,
             photo: res.user.photoURL,
+            id: res.user.uid,
             messages: [],
           },
           { merge: true }

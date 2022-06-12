@@ -1,3 +1,4 @@
+import { db } from "./firebaseConfig"
 import React, { useEffect, useState } from "react"
 import SignIn from "./pages/SignIn"
 import { Routes, Route } from "react-router-dom"
@@ -5,7 +6,6 @@ import Home from "./pages/Home"
 import Loading from "./Components/Loading"
 import { useDispatch, useSelector } from "react-redux"
 import { collection, getDocs, query } from "firebase/firestore"
-import { db } from "./firebaseConfig"
 
 function App() {
   const dispatch = useDispatch()
@@ -25,7 +25,6 @@ function App() {
   const getArray = async () => {
     const getingDocs = await getDocs(userCollection)
     getingDocs.forEach((doc) => {
-      console.log(doc)
       if (array.length === 0) {
         dispatch({ type: "ADD_DOCS", payload: { ...doc.data(), id: doc.id } })
       }

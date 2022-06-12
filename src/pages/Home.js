@@ -1,4 +1,4 @@
-import { async } from "@firebase/util"
+import { db } from "../firebaseConfig"
 import {
   addDoc,
   arrayUnion,
@@ -7,14 +7,15 @@ import {
   getDoc,
   getDocs,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { db } from "../firebaseConfig"
 
 export default function Home({ getArray }) {
   const dispatch = useDispatch()
@@ -22,15 +23,19 @@ export default function Home({ getArray }) {
   const array = useSelector((state) => state.array)
   const [count, setCount] = useState(0)
   const name = useSelector((state) => state.name)
+  const id = useSelector((state) => state.id)
   const photo = useSelector((state) => state.photo)
   const userCollection = query(collection(db, "users"))
   const getingDocs = getDocs(userCollection)
 
   //   Chat
+
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const [userChatting, setUserChatting] = useState([])
+  const [userChatting, setUserChatting] = useState(null)
   const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState("")
+  const [reset, setReset] = useState(false)
+  const dummy = useRef()
 
   //   Pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -39,50 +44,110 @@ export default function Home({ getArray }) {
   const indexOfLastRecord = currentPage * recordsPerPage
   const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
 
+  //
+
   useEffect(() => {
-    const userData = doc(db, "users", localStorage.getItem("token"))
-    onSnapshot(userData, (doc) => {})
-  }, [])
+    const q = query(collection(db, "messages"), orderBy("timestamp", "desc"))
+  }, [messages])
 
-  let newArray = array.slice(indexOfFirstRecord, indexOfLastRecord)
-  console.log(newArray)
+  useEffect(() => {
+    // if (messages === null) {
+    //   console.log("setting messages the first time")
+    //   setMessages(snapShot.docs)
+    // } else {
+    //   console.log("updating messages")
+    //   setMessages([...snapShot.docs, ...messages])
+    // }
+  }, [messages])
 
-  const createChat = async (id) => {
-    // Create a new doc in messages collection
-    await addDoc(collection(db, "messages"), {
-      chatStarted: serverTimestamp(),
-    })
+  const updateMessages = async (id) => {
+    const q = query(collection(db, "messages"), orderBy("timestamp"))
 
     const usersDoc = await getDoc(doc(db, "users", id))
+    const userData = doc(db, "users", localStorage.getItem("token"))
+    let loggedInUserData = await getDoc(userData)
+  }
+  let newArray = array.slice(indexOfFirstRecord, indexOfLastRecord)
+
+  const createChat = async (id) => {
+    const usersDoc = await getDoc(doc(db, "users", id))
+    const userData = doc(db, "users", localStorage.getItem("token"))
+    let loggedInUserData = await getDoc(userData)
+
     setUserChatting({ ...usersDoc.data(), id: usersDoc.id })
     setIsChatOpen(true)
-    onSnapshot(doc(db, "users", userChatting.id), (doc) => {
-      setMessages(doc.data().messages)
+
+    // Messaging needs fixing
+    // Ideas:
+    // Create a document of messages and put all of the messages there
+    // Place key of author and value of user that created the message
+    // Add another key of who is receiving the messages
+    // Map through all of the messages of that user thats sending
+    // And find the ones that match with the user thats receiving
+    const q = query(collection(db, "messages"), orderBy("timestamp"))
+
+    const querySnapshot = await getDocs(q)
+
+    querySnapshot.forEach((doc) => {
+      if (doc.data().sentTo === usersDoc.id) {
+        if (doc.data().sentBy === loggedInUserData.id) {
+          setMessages((oldArray) => [...oldArray, doc.data()])
+        }
+      }
+
+      if (doc.data().sentTo === loggedInUserData.id) {
+        if (doc.data().sentBy === usersDoc.id) {
+          setMessages((oldArray) => [...oldArray, doc.data()])
+        }
+      }
     })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     const userData = doc(db, "users", localStorage.getItem("token"))
+    let loggedInUserData = await getDoc(userData)
     if (inputValue) {
-      // User sending the message
-      await updateDoc(userData, {
-        messages: arrayUnion({
-          Message: inputValue,
-          time: new Date().getTime(),
-        }),
+      //   User sending the message
+      await addDoc(collection(db, "messages"), {
+        message: inputValue,
+        sentBy: loggedInUserData.id,
+        sentTo: userChatting.id,
+        timestamp: serverTimestamp(),
+      })
+      setMessages((oldArray) => [
+        ...oldArray,
+        {
+          message: inputValue,
+          sentBy: loggedInUserData.id,
+          sentTo: userChatting.id,
+          timestamp: serverTimestamp(),
+        },
+      ])
+
+      const q = query(collection(db, "messages"), orderBy("timestamp"))
+
+      const querySnapshot = getDocs(q)
+      onSnapshot(q, (snapshot) => {
+        snapshot.forEach((doc) => {
+          if (doc.data().sentTo === userChatting.id) {
+            if (doc.data().sentBy === loggedInUserData.id) {
+              setMessages((oldArray) => [...oldArray])
+            }
+          }
+        })
       })
 
-      //   User receiving the message
-      await updateDoc(doc(db, "users", userChatting.id), {
-        messages: arrayUnion({
-          Message: inputValue,
-          time: new Date().getTime(),
-        }),
-      })
-      onSnapshot(doc(db, "users", userChatting.id), (doc) => {
-        setMessages(doc.data().messages)
-      })
+      //   querySnapshot.forEach((doc) => {
+      //     if (doc.data().sentTo === userChatting.id) {
+      //       console.log(doc.data().message)
+      //       if (doc.data().sentBy === loggedInUserData.id) {
+      //         setMessages((oldArray) => [...oldArray])
+      //       }
+      //     }
+      //   })
+
+      dummy.current?.scrollIntoView({ behavior: "smooth" })
       setInputValue("")
     }
   }
@@ -100,11 +165,18 @@ export default function Home({ getArray }) {
                 alt=""
               />
               <p className="text-base">{userChatting.name}</p>{" "}
-              <button onClick={() => setIsChatOpen(false)}>Back</button>
+              <button
+                onClick={() => {
+                  setMessages([])
+                  setIsChatOpen(false)
+                }}
+              >
+                Back
+              </button>
             </div>
             <div
               style={{ height: "75%" }}
-              className="w-full  overflow-y-auto bg-white p-2"
+              className="relative  w-full gap-2  overflow-y-auto bg-white"
             >
               {messages.length === 0 ? (
                 <h2>Say hi!</h2>
@@ -112,19 +184,22 @@ export default function Home({ getArray }) {
                 messages.map((msg) => {
                   return (
                     <div
-                      style={{ minHeight: "3rem" }}
-                      className="w-full flex justify-start items-center "
+                      style={{ minHeight: "1rem" }}
+                      className={`w-full flex justify-start items-center ${
+                        id === msg.sentBy ? "bg-blue-500" : "bg-red-500"
+                      }`}
                     >
-                      {msg.Message}
+                      {msg.message}
                       {""}
                     </div>
                   )
                 })
               )}
+              <div className="w-full mt-10 bg-red-500" ref={dummy}></div>
             </div>
             <form
               onSubmit={handleSubmit}
-              className="w-full h-1/6 px-8 flex justify-center items-center "
+              className="w-full h-36 px-8 flex justify-center items-center "
             >
               <input
                 value={inputValue}
@@ -139,7 +214,10 @@ export default function Home({ getArray }) {
           array.map((item) => {
             return (
               <div
-                onClick={() => createChat(item.id)}
+                onClick={() => {
+                  updateMessages(item.id)
+                  createChat(item.id)
+                }}
                 className="w-full h-10 flex justify-start items-center bg-slate-100 text-black"
               >
                 <h2>{item.name}</h2>

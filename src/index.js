@@ -14,6 +14,7 @@ const reducer = (state, action) => {
       name: action.name,
       email: action.email,
       photo: action.photo,
+      id: action.id,
     }
   }
   if (action.type === "LOADING_TRUE") {
