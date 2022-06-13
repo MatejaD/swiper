@@ -47,7 +47,6 @@ export default function SignIn() {
             email: res.user.email,
             photo: res.user.photoURL,
             id: res.user.uid,
-            messages: [],
           },
           { merge: true }
         )

@@ -25,7 +25,9 @@ export default function Home({ getArray }) {
   const name = useSelector((state) => state.name)
   const id = useSelector((state) => state.id)
   const photo = useSelector((state) => state.photo)
+  const [currentUser, setCurrentUser] = useState({})
   const userCollection = query(collection(db, "users"))
+  const loggedInUserDoc = doc(db, "users", localStorage.getItem("token"))
   const getingDocs = getDocs(userCollection)
 
   //   Chat
@@ -48,16 +50,14 @@ export default function Home({ getArray }) {
   useEffect(() => {
     const q = query(collection(db, "messages"), orderBy("timestamp", "desc"))
   }, [messages])
+  const getUser = async () => {
+    const loggedInUser = await getDoc(loggedInUserDoc)
+    setCurrentUser(loggedInUser.data())
+  }
 
   useEffect(() => {
-    // if (messages === null) {
-    //   console.log("setting messages the first time")
-    //   setMessages(snapShot.docs)
-    // } else {
-    //   console.log("updating messages")
-    //   setMessages([...snapShot.docs, ...messages])
-    // }
-  }, [messages])
+    getUser()
+  }, [])
 
   const updateMessages = async (id) => {}
   let newArray = array.slice(indexOfFirstRecord, indexOfLastRecord)
@@ -170,43 +170,45 @@ export default function Home({ getArray }) {
           }
         })
     }
+
     querySnapshot.forEach(async (doc) => {
-      if (doc.data().sentTo === otherUser.id) {
-        if (doc.data().sentBy === loggedInUserData.id) {
-          await setDoc(
-            otherUserDoc,
-            {
-              matchesArray: [loggedInUserData.id],
-            },
-            { merge: true }
-          )
-          onSnapshot(otherUserDoc, { includeMetadataChanges: true }, (doc) => {
-            doc.data().matchesArray.map((match) => {
-              if (match === loggedInUserData.id) {
-                console.log(match)
-              }
-            })
+      if (doc.data().sentTo === loggedInUserData.id) {
+        if (doc.data().sentBy === otherUser.id) {
+          console.log("HE LIKED ME!")
+          await updateDoc(userData, {
+            matchesArray: arrayUnion(otherUser.data()),
           })
+          await updateDoc(otherUserDoc, {
+            matchesArray: arrayUnion(loggedInUserData.data()),
+          })
+          // onSnapshot(otherUserDoc, { includeMetadataChanges: true }, (doc) => {
+          //   doc.data().matchesArray.map(async (match) => {
+          //     if (match === loggedInUserData.id) {
+          //     }
+          //   })
+          // })
         }
       }
 
-      if (doc.data().sentTo === loggedInUserData.id) {
-        if (doc.data().sentBy === otherUser.id) {
-          setDoc(
-            userData,
-            {
-              matchesArray: [otherUser.id],
-            },
-            { merge: true }
-          )
-        }
-      }
+      // if (doc.data().sentTo === loggedInUserData.id) {
+      //   if (doc.data().sentBy === otherUser.id) {
+      //     setDoc(
+      //       userData,
+      //       {
+      //         matchesArray: [otherUser.id],
+      //       },
+      //       { merge: true }
+      //     )
+      //   }
+      // }
     })
+
+    getUser()
   }
 
   return (
     <div className="flex justify-start items-center w-screen h-screen bg-green-500">
-      <div className="h-full w-1/3 flex flex-col justify-center items-center gap-4 bg-blue-500">
+      <div className="h-full w-1/3 flex flex-col justify-start p-4 overflow-y-auto items-center gap-4 bg-slate-100">
         {isChatOpen ? (
           <div className="w-full h-full bg-red-400">
             {" "}
@@ -262,17 +264,27 @@ export default function Home({ getArray }) {
               />
             </form>
           </div>
+        ) : currentUser.matchesArray === undefined ? (
+          <h2>No Matches yet</h2>
         ) : (
-          array.map((item) => {
+          currentUser.matchesArray.map((item) => {
             return (
-              <div
-                onClick={() => {
-                  updateMessages(item.id)
-                  createChat(item.id)
-                }}
-                className="w-full h-10 flex justify-start items-center bg-slate-100 text-black"
-              >
-                <h2>{item.name}</h2>
+              <div className="w-full h-full flex justify-start items-start flex-col gap-8 overflow-auto">
+                <h1 className="text-2xl">Messages</h1>
+                <div
+                  onClick={() => {
+                    updateMessages(item.id)
+                    createChat(item.id)
+                  }}
+                  className="w-full h-12 px-2 flex justify-start gap-4 items-center bg-slate-100 border-black border-2 rounded-md text-black"
+                >
+                  <img
+                    className="w-10 h-10 rounded-full"
+                    src={item.photo}
+                    alt=""
+                  />
+                  <h2>{item.name}</h2>
+                </div>
               </div>
             )
           })
