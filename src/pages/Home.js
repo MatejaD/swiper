@@ -34,7 +34,6 @@ export default function Home({ getArray }) {
   const [userChatting, setUserChatting] = useState(null)
   const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState("")
-  const [reset, setReset] = useState(false)
   const dummy = useRef()
 
   //   Pagination
@@ -60,13 +59,7 @@ export default function Home({ getArray }) {
     // }
   }, [messages])
 
-  const updateMessages = async (id) => {
-    const q = query(collection(db, "messages"), orderBy("timestamp"))
-
-    const usersDoc = await getDoc(doc(db, "users", id))
-    const userData = doc(db, "users", localStorage.getItem("token"))
-    let loggedInUserData = await getDoc(userData)
-  }
+  const updateMessages = async (id) => {}
   let newArray = array.slice(indexOfFirstRecord, indexOfLastRecord)
 
   const createChat = async (id) => {
@@ -152,6 +145,65 @@ export default function Home({ getArray }) {
     }
   }
 
+  const likeUser = async (id) => {
+    setCurrentPage(currentPage + 1)
+    const matchesCollection = collection(db, "matches")
+    const otherUserDoc = doc(db, "users", id)
+    const userData = doc(db, "users", localStorage.getItem("token"))
+    const otherUser = await getDoc(otherUserDoc)
+    let loggedInUserData = await getDoc(userData)
+
+    await addDoc(matchesCollection, {
+      sentBy: loggedInUserData.id,
+      sentTo: otherUser.id,
+      timestamp: serverTimestamp(),
+    })
+
+    const q = query(collection(db, "matches"), orderBy("timestamp"))
+
+    const querySnapshot = await getDocs(q)
+    {
+      otherUser.data().matchesArray &&
+        otherUser.data().matchesArray.map((match) => {
+          if (match === loggedInUserData.id) {
+            console.log("ITS A MATCH!")
+          }
+        })
+    }
+    querySnapshot.forEach(async (doc) => {
+      if (doc.data().sentTo === otherUser.id) {
+        if (doc.data().sentBy === loggedInUserData.id) {
+          await setDoc(
+            otherUserDoc,
+            {
+              matchesArray: [loggedInUserData.id],
+            },
+            { merge: true }
+          )
+          onSnapshot(otherUserDoc, { includeMetadataChanges: true }, (doc) => {
+            doc.data().matchesArray.map((match) => {
+              if (match === loggedInUserData.id) {
+                console.log(match)
+              }
+            })
+          })
+        }
+      }
+
+      if (doc.data().sentTo === loggedInUserData.id) {
+        if (doc.data().sentBy === otherUser.id) {
+          setDoc(
+            userData,
+            {
+              matchesArray: [otherUser.id],
+            },
+            { merge: true }
+          )
+        }
+      }
+    })
+  }
+
   return (
     <div className="flex justify-start items-center w-screen h-screen bg-green-500">
       <div className="h-full w-1/3 flex flex-col justify-center items-center gap-4 bg-blue-500">
@@ -235,13 +287,37 @@ export default function Home({ getArray }) {
               console.log(array)
               return (
                 <div
+                  referrerpolicy="no-referrer"
                   style={{ backgroundImage: `url(${item.photo})` }}
-                  className="sliding-img bg-white absolute w-full h-full flex justify-center items-center gap-10"
+                  className="sliding-img p-4 absolute w-full h-full flex
+                  flex-col justify-end items-center gap-2"
                 >
-                  {item.name}{" "}
-                  <button onClick={() => setCurrentPage(currentPage + 1)}>
-                    NEXT
-                  </button>
+                  {/* <h2>{item.name}</h2> */}
+                  <div className="w-full h-1/6 flex flex-col gap-2 justify-start items-start">
+                    <h2 className="text-xl">{item.name}</h2>
+                    <p>
+                      Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                      Ducimus qui deserunt cumque magni, consectetur eos,
+                      assumenda quibusdam fugit aspernatur temporibus sed,
+                      soluta vero vitae tempore inventore laborum officiis
+                      corrupti magnam.
+                    </p>
+                  </div>
+                  <div className="w-2/3 h-10 text-xl flex justify-between items-center">
+                    <button
+                      className="w-16 h-16 rounded-full bg-red-600"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                    >
+                      Dislike
+                    </button>
+
+                    <button
+                      className="w-16 h-16 rounded-full bg-green-600"
+                      onClick={() => likeUser(item.id)}
+                    >
+                      Like
+                    </button>
+                  </div>
                 </div>
               )
             })
