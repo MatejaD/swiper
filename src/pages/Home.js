@@ -115,6 +115,8 @@ export default function Home({ getArray }) {
           sentBy: loggedInUserData.id,
           sentTo: userChatting.id,
           timestamp: serverTimestamp(),
+          hours: new Date().getHours(),
+          minutes: new Date().getMinutes(),
         },
       ])
 
@@ -208,7 +210,11 @@ export default function Home({ getArray }) {
 
   return (
     <div className="flex justify-start items-center w-screen h-screen bg-green-500">
-      <div className="h-full w-1/3 flex flex-col justify-start p-4 overflow-y-auto items-center gap-4 bg-slate-100">
+      <div
+        className={`h-full break-words w-1/3 flex flex-col justify-start p-4  items-center flex-1 gap-4 bg-slate-100 ${
+          isChatOpen ? "overflow-hidden" : "overflow-auto"
+        }`}
+      >
         {isChatOpen ? (
           <div className="w-full h-full bg-red-400">
             {" "}
@@ -230,21 +236,35 @@ export default function Home({ getArray }) {
             </div>
             <div
               style={{ height: "75%" }}
-              className="relative  w-full gap-2  overflow-y-auto bg-white"
+              className="relative flex flex-col  w-full  gap-6
+              overflow-y-auto bg-white"
             >
               {messages.length === 0 ? (
                 <h2>Say hi!</h2>
               ) : (
                 messages.map((msg) => {
+                  const hours = new Date().getHours()
+                  const minutes = new Date().getMinutes()
                   return (
                     <div
-                      style={{ minHeight: "1rem" }}
-                      className={`w-full flex justify-start items-center ${
-                        id === msg.sentBy ? "bg-blue-500" : "bg-red-500"
+                      style={{ minHeight: "2rem", minWidth: "100%" }}
+                      className={`w-full px-4 flex items-end justify-end    ${
+                        id === msg.sentBy ? " justify-end" : "justify-start"
                       }`}
                     >
-                      {msg.message}
-                      {""}
+                      <div
+                        style={{ minHeight: "100%", minWidth: "2rem" }}
+                        className={`px-4 flex flex-col items-end bg-blue-500 rounded-l-md
+                        rounded-br-2xl rounded-tr-md
+                         ${
+                           id === msg.sentBy
+                             ? "justify-end bg-blue-400"
+                             : "justify-start"
+                         }`}
+                      >
+                        {msg.message}
+                        <span>{`${hours}:${minutes}`}</span>
+                      </div>
                     </div>
                   )
                 })
