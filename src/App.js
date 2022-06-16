@@ -24,6 +24,7 @@ function App() {
 
   const getArray = async () => {
     const getingDocs = await getDocs(userCollection)
+    console.log(getingDocs.length)
     getingDocs.forEach((doc) => {
       if (array.length === 0) {
         dispatch({ type: "ADD_DOCS", payload: { ...doc.data(), id: doc.id } })
@@ -32,7 +33,9 @@ function App() {
   }
 
   useEffect(() => {
-    getArray()
+    if (array.length === 0) {
+      getArray()
+    }
   }, [])
 
   return (

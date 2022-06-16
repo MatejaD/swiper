@@ -28,7 +28,6 @@ export default function Home({ getArray }) {
   const [currentUser, setCurrentUser] = useState({})
   const userCollection = query(collection(db, "users"))
   const loggedInUserDoc = doc(db, "users", localStorage.getItem("token"))
-  const getingDocs = getDocs(userCollection)
 
   //   Chat
 
@@ -47,12 +46,9 @@ export default function Home({ getArray }) {
 
   //
 
-  useEffect(() => {
-    const q = query(collection(db, "messages"), orderBy("timestamp", "desc"))
-  }, [messages])
   const getUser = async () => {
     const loggedInUser = await getDoc(loggedInUserDoc)
-    setCurrentUser(loggedInUser.data())
+    setCurrentUser({ ...loggedInUser.data(), id: loggedInUser.id })
   }
 
   useEffect(() => {
@@ -66,6 +62,7 @@ export default function Home({ getArray }) {
     const usersDoc = await getDoc(doc(db, "users", id))
     const userData = doc(db, "users", localStorage.getItem("token"))
     let loggedInUserData = await getDoc(userData)
+    console.log(currentUser.id)
 
     setUserChatting({ ...usersDoc.data(), id: usersDoc.id })
     setIsChatOpen(true)
@@ -107,6 +104,8 @@ export default function Home({ getArray }) {
         sentBy: loggedInUserData.id,
         sentTo: userChatting.id,
         timestamp: serverTimestamp(),
+        hours: new Date().getHours(),
+        minutes: new Date().getMinutes(),
       })
       setMessages((oldArray) => [
         ...oldArray,
@@ -209,16 +208,16 @@ export default function Home({ getArray }) {
   }
 
   return (
-    <div className="flex justify-start items-center w-screen h-screen bg-green-500">
+    <div className="flex justify-start items-center w-screen h-screen bg-white">
       <div
         className={`h-full break-words w-1/3 flex flex-col justify-start p-4  items-center flex-1 gap-4 bg-slate-100 ${
           isChatOpen ? "overflow-hidden" : "overflow-auto"
         }`}
       >
         {isChatOpen ? (
-          <div className="w-full h-full bg-red-400">
+          <div className="w-full h-full bg-white flex flex-col justify-between">
             {" "}
-            <div className="w-full h-12 bg-blue-600 flex justify-start items-center px-4 gap-2">
+            <div className="w-full z-10 h-12 bg-blue-600 flex justify-start items-center px-4 gap-2">
               <img
                 className="w-10 h-10 rounded-full z-50"
                 src={userChatting.photo}
@@ -236,15 +235,13 @@ export default function Home({ getArray }) {
             </div>
             <div
               style={{ height: "75%" }}
-              className="relative flex flex-col  w-full  gap-6
+              className="relative flex flex-col p-2  w-full  gap-6
               overflow-y-auto bg-white"
             >
               {messages.length === 0 ? (
                 <h2>Say hi!</h2>
               ) : (
                 messages.map((msg) => {
-                  const hours = new Date().getHours()
-                  const minutes = new Date().getMinutes()
                   return (
                     <div
                       style={{ minHeight: "2rem", minWidth: "100%" }}
@@ -254,16 +251,16 @@ export default function Home({ getArray }) {
                     >
                       <div
                         style={{ minHeight: "100%", minWidth: "2rem" }}
-                        className={`px-4 flex flex-col items-end bg-blue-500 rounded-l-md
+                        className={`px-4 py-1 flex flex-col items-end bg-blue-500 rounded-l-md
                         rounded-br-2xl rounded-tr-md
                          ${
-                           id === msg.sentBy
+                           currentUser.id === msg.sentBy
                              ? "justify-end bg-blue-400"
                              : "justify-start"
                          }`}
                       >
                         {msg.message}
-                        <span>{`${hours}:${minutes}`}</span>
+                        <span className="text-xs">{`${msg.hours}:${msg.minutes}`}</span>
                       </div>
                     </div>
                   )
@@ -273,13 +270,13 @@ export default function Home({ getArray }) {
             </div>
             <form
               onSubmit={handleSubmit}
-              className="w-full h-36 px-8 flex justify-center items-center "
+              className="w-full h-16 px-8 border-t-2 border-black  flex justify-center items-center "
             >
               <input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Type..."
-                className="w-full h-10 px-2 outline-none rounded-sm"
+                className="w-full h-10 px-2  outline-none rounded-sm"
                 type="text"
               />
             </form>
@@ -289,8 +286,7 @@ export default function Home({ getArray }) {
         ) : (
           currentUser.matchesArray.map((item) => {
             return (
-              <div className="w-full h-full flex justify-start items-start flex-col gap-8 overflow-auto">
-                <h1 className="text-2xl">Messages</h1>
+              <div className="w-full h-12  flex justify-start items-start flex-col gap-8 overflow-auto">
                 <div
                   onClick={() => {
                     updateMessages(item.id)
@@ -310,16 +306,15 @@ export default function Home({ getArray }) {
           })
         )}
       </div>
-      <div className="w-3/5 h-full flex justify-center items-center gap-5 border-4 border-purple-500">
+      <div className="w-3/5 h-full flex justify-center items-center gap-5 mr-2">
         <div className="w-full h-full flex flex-col relative">
           {newArray.length === 0 ? (
             <h1>No more Profiles :=</h1>
           ) : (
             newArray.map((item) => {
-              console.log(array)
               return (
                 <div
-                  referrerpolicy="no-referrer"
+                  referrerPolicy="no-referrer"
                   style={{ backgroundImage: `url(${item.photo})` }}
                   className="sliding-img p-4 absolute w-full h-full flex
                   flex-col justify-end items-center gap-2"

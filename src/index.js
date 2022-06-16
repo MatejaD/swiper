@@ -24,7 +24,11 @@ const reducer = (state, action) => {
     return { ...state, isLoading: false }
   }
   if (action.type === "ADD_DOCS") {
-    return { ...state, array: state.array.concat(action.payload) }
+    if (state.array.length < 3) {
+      return { ...state, array: state.array.concat(action.payload) }
+    } else {
+      return state
+    }
   }
   return state
 }
@@ -32,6 +36,7 @@ const reducer = (state, action) => {
 const initalState = {
   name: "Name",
   isLoading: false,
+  id: 0,
   array: [],
 }
 
